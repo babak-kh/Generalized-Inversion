@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy.polynomial.polynomial as nppoly
 import math as mt
 import xlrd
+import random as rnd
 
 def PGA(outputpath, spec):
 
@@ -16,6 +17,8 @@ def PGA(outputpath, spec):
 
     fig = plt.figure(1)
     ax = fig.add_subplot(111)
+    ax.set_xscale('log')
+    ax.set_yscale('log')
     ax.xaxis.grid(which='both', ls='-', lw=0.3, color='#c0c0c0', alpha=0.1, zorder=0)
     ax.yaxis.grid(which='both', ls='-', lw=0.3, color='#c0c0c0', alpha=0.1, zorder=1)
     ax.scatter(spec[2,:], peakaccel, s=100,
@@ -25,8 +28,41 @@ def PGA(outputpath, spec):
     ax.xaxis.set_label_text('Distance(Km)', size=18, family='freeserif', color='#000099')
     ax.yaxis.set_label_text('PGA(mg)', size=18, family='freeserif',
                              color='#000099')
+
+    mr = np.genfromtxt('/home/babak/PycharmProjects/generalwithinterface/GeneralInversion/Inputs/m-r.csv', delimiter=',')
+    fs = 0
+    fr = 1
+    fn = 0
+    fu = 0
+    sbb = 0
+    scc = 1
+    sdd = 0
+    e1 = 2.88
+    b1 = 0.554
+    b2 = 0.103
+    b3 = 0.244
+    c1 = -0.96
+    fss = -0.03
+    ftf = -0.039
+    sb = 0.027
+    sc = 0.01
+    sd = -0.017
+    tor = 0.094
+    fi = 0.283
+    sig = 0.298
+    for i in range(np.shape(mr)[1]):
+        if mr[2, i] <= 5:
+            fm = (b1 * (mr[2, i] - 5)) + (b2 * ((mr[2, i] - 5) ** 2))
+        else:
+            fm = b3 * (mr[2, i] - 5)
+        gmpepga = 10 ** (e1 + (c1 * np.log(mr[3, i])) + fm + sbb * sb + scc * sc + sdd * sd + fss * fs + ftf * fr)
+        print gmpepga
+        mr[1, i] = gmpepga
+    ax.scatter(spec[2,:], mr[1, :], s=100,
+               color='red', edgecolor='black', alpha=0.5, zorder=3)
     fig.savefig(outputpath + 'Source-effects/Extra-plots/'
                    + 'PGA' + '.pdf', format='pdf', dpi=200)
+    plt.close(fig)
 
 def gettingresults():  # This function is not used in main flow of the program
     gmatrice, datamatrice = GeneralizedInversion.gmatrix(51, 17, rf=(1, 3))
@@ -43,13 +79,25 @@ def gettingresults():  # This function is not used in main flow of the program
 def pathcalculations(outputpath, n=20):
     result = np.genfromtxt(outputpath + 'svd/answer.txt',
                            delimiter=',')
+    covd = np.genfromtxt(outputpath + 'svd/Covariance/covd.txt',
+                         defaultfmt='.4e', delimiter=',')
     freqs = np.genfromtxt(outputpath + 'Interpolating/freqs.txt',
                           delimiter=',')
-    qfactor = result[:n]
-    qfactor = 1.0 / qfactor
+    error = np.zeros(n)
+    qfactor2 = result[:n]
+    for j in range(n):
+        s = [np.random.normal(result[j], np.sqrt(covd[j,j])) for x in range(10000)]
+        s = np.asarray(s)
+        s = 1/s
+        error[j] = np.std(s)
+    qfactor = 1.0 / qfactor2
+
     np.savetxt(outputpath + 'Path-effect/q.txt', qfactor,
                fmt='%0.5f', delimiter=',')
+    np.savetxt(outputpath + 'Path-effect/covdiagonal.txt', np.sqrt(np.diag(covd)[:]),
+               fmt='%0.5f', delimiter=',')
     fit = nppoly.polyfit(np.log(freqs), np.log(qfactor), 1)
+
     aa = np.exp(fit[0])
 
     # ----------------------------- plotting -------------------
@@ -59,7 +107,7 @@ def pathcalculations(outputpath, n=20):
     ax1 = fig.add_subplot(111)
     ax1.xaxis.grid(which='both', ls='-', lw=0.3, color='#c0c0c0', alpha=0.1, zorder=0)
     ax1.yaxis.grid(which='both', ls='-', lw=0.3, color='#c0c0c0', alpha=0.1, zorder=1)
-
+    ax1.errorbar(freqs, qfactor, error )
     ax1.loglog(freqs, qfactor, color='#202020', linewidth=2,
                linestyle='--', label='Calculated Qs', zorder=4)
     ax1.loglog(freqs, np.exp(nppoly.polyval(np.log(freqs), fit)),
@@ -136,6 +184,7 @@ def siteextraction(inputpath, outputpath, eqcount, stcount, n=20, HtoV=(False, 0
                    H, fmt='%0.5f', delimiter=',')
 
     siteresults = np.zeros([n, stcount])
+    siteresults2 = np.zeros([n, stcount])
     siteresultspositive = np.zeros([n, stcount])
     siteresultsnegative = np.zeros([n, stcount])
     # print n
@@ -145,6 +194,7 @@ def siteextraction(inputpath, outputpath, eqcount, stcount, n=20, HtoV=(False, 0
             siteresultspositive[j, i] = np.exp(result[n + (eqcount * n) + (i * n) + j] + \
                                                mt.sqrt(covd[n + (eqcount * n) + (i * n) + j, n + (eqcount * n) + (
                                                i * n) + j]))
+            siteresults2[j, i] = siteresults[j, i] * (rnd.random() + 0.5)
             siteresultsnegative[j, i] = np.exp(result[n + (eqcount * n) + (i * n) + j] - \
                                                mt.sqrt(covd[n + (eqcount * n) + (i * n) + j, n + (eqcount * n) + (
                                                i * n) + j]))
@@ -172,6 +222,7 @@ def siteextraction(inputpath, outputpath, eqcount, stcount, n=20, HtoV=(False, 0
             if HtoV[0]:
                 ax1.loglog(freqs, HtoVinterp[3:, counter], lw=1, ls='-', color='Blue')
             ax1.loglog(freqs, siteresults[:, counter], lw=2, ls='-', color='#FF8000')
+            ax1.loglog(freqs, siteresults2[:, counter], lw=1, ls='-', color='green')
             ax1.loglog(freqs, siteresultsnegative[:, counter], lw=2, ls='--',
                        zorder=2, color='#193300')
             ax1.loglog(freqs, siteresultspositive[:, counter], lw=2, ls='--',

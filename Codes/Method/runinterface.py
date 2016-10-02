@@ -75,40 +75,40 @@ class EffectsCalculationThread(QThread):
             self.signalemit('SVD method is implemented and results-matrix is calculated', False)
 
         if self.variables[16]:
-            self.signalemit('Path effect is calculating using result-matrix:')
+            self.signalemit('Path effect is calculating using result-matrix:', True)
             effectscalculations.pathcalculations(self.variables[10], self.variables[7])
-            self.signalemit('Path effect is done calculating and the plot is saved')
+            self.signalemit('Path effect is done calculating and the plot is saved', False)
         if self.variables[17]:
-            self.signalemit('Site effect is calculating:')
+            self.signalemit('Site effect is calculating:', True)
             self.dk = self.variables[0] - self.variables[1]
             self.HtoV = (False, self.dk)
             effectscalculations.siteextraction(self.variables[9], self.variables[10],
                                                self.eqcount, self.stcount,
                                                self.variables[7], self.HtoV)
-            self.signalemit('Site effects are done calculating and plot for each site is saved.')
+            self.signalemit('Site effects are done calculating and plot for each site is saved.', False)
         if self.variables[18]:
-            self.signalemit('Source effects are calculating:')
+            self.signalemit('Source effects are calculating:', True)
             effectscalculations.sourceextraction(self.variables[9], self.variables[10], self.eqcount, self.variables[4]
                                                  , self.variables[5], self.variables[7])
-            self.signalemit('Source effects are dont calculating and plots are saved')
+            self.signalemit('Source effects are dont calculating and plots are saved', False)
         if self.variables[19]:
-            self.signalemit('Grid-search method is running using predefined range for parameters')
+            self.signalemit('Grid-search method is running using predefined range for parameters', True)
             sigma = (1, 600, 600)   # (Start, End, Number of samples)
             gamma = (2.0, 2.0, 1)    # (Start, End, Number of samples)
             magnitudes = (0.5, 40)   # (Magnitude increase limit, Step)
             effectscalculations.gridsearch(self.variables[9], self.variables[10], sigma,
                                            gamma, magnitudes, self.variables[4],
                                            self.variables[7], self.variables[5], self.variables[8])
-            self.signalemit('Grid-search method is completed and the results is saved')
+            self.signalemit('Grid-search method is completed and the results is saved', False)
         if self.variables[20]:
             effectscalculations.gridsearchplots(self.variables[9], self.variables[10], self.eqcount, self.stcount)
 
         if self.variables[21]:
-            self.signalemit('Extra plots for source mechanism is calculating:')
+            self.signalemit('Extra plots for source mechanism is calculating:', True)
             effectscalculations.extrasourceplots(self.variables[9], self.variables[10], self.eqcount, self.stcount,
                                                  self.variables[7], self.variables[5],
                                                  self.variables[4], self.variables[8])
-            self.signalemit('Extra plots are saved')
+            self.signalemit('Extra plots are saved', False)
         self.signalemit('All the selected modules are done.', True)
     def signalemit(self, text, style):
         self.signal.emit(text, style)
